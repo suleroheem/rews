@@ -1,107 +1,75 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const port = 3000;
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const port = 3001;
+const mongoose = require("mongoose");
+const Usermodel = require("../myapp/user");
+const Product = require("../myapp/product");
+const authRoutes = require("./routes/auth/index"); // Only keep this line if you want to use auth routes from index.js
+const productRoutes = require("./routes/products/products"); // Use a different variable for product routes
+const cartRoutes = require("./routes/cart/cart"); // Use a different variable for product routes
+const saltRounds = 10;
+const Cart = require("../myapp/cart");
+const cors = require("cors");
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-async function hashpass(password) {
-    const res = await bcrypt.hash(password,10);
-    return res;
-}
+app.use(cors({
+  origin: "http://localhost:3000", // this can be your frontend URL
+  credentials: true,
+}));
+
+app.use("/auth", authRoutes); // Routes for authentication
+app.use("/products", productRoutes);
+app.use("/cart", cartRoutes);
+// app.use("/auth", a);
 
 // Define a simple route
-app.get('/', (req, res) => {
-  res.send('Hello, World!');
-});
-
-
-app.post('/login', async (req,res) => {
-    const { username, password, email } = req.body;
-
-    if (!username || !password || !email) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-  
-    try {
-      // Check if the user already exists
-      const existingUser = await Usermodel.findOne({ email });
-  
-      if (existingUser) {
-        // Compare the password with the hashed password
-        const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-        if (isPasswordValid) {
-          return res.status(200).json({ message: 'Login successful' });
-        } else {
-          return res.status(400).json({ message: 'Invalid password' });
-        }
-      } else {
-        // Encrypt the password
-        const hashedPassword = await bcrypt.hash(password, 10);
-  
-        // Save the new user
-        const newUser = new User({
-          username,
-          password: hashedPassword,
-          email,
-        });
-  
-        await newUser.save();
-        return res.status(201).json({ message: 'User registered successfully' });
-      }
-    } catch (error) {
-      return res.status(500).json({ message: 'Internal server error', error: error.message });
-    }
-})
-// Corrected POST route for registration
-app.post('/register',async (req, res) => {
-  const { username, password, email } = req.body;
-  console.log(req.body)
-  const username_body = req.body.username;
-  const password_body = req.body.password;
-  const email_body = req.body.email;
-
-  if (!username || !password) {
-    return res.status(404).json({ message: 'Username and password are required.' });
-  }
-
-  const emailExist = await Usermodel.findOne({ email: email});
-  if (emailExist) {
-    return res.status(409).json({ message: 'Email already exists.' });
-  }
-
-  // Check if username already exists
-  const hashedPassword = await hashpass( password);
-
-  const user_created = await Usermodel.create ({
-    username: username_body,
-    password: hashedPassword,
-    email: email_body,
-  });
-
-  console.log(user_created);
-  
-  const data = {
-     password : hashedPassword
-  };
-  console.log(data);
-
-  return res.status(200).json({ message: 'User registered successfully.' });
+app.get("/", (req, res) => {
+  // This here is to tell us our frontend has connected to our backend
+  console.log("Back-End Connected");
+  res.send("Back-End Connected");
 });
 
 
 
+// app.post('/create-order', async (req, res) => {
+//   const { customerId, products, totalAmount, shippingAddress } = req.body;
 
-// Define the User schema
-const UserSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  password: String
-});
+//   if (!customerId || !Array.isArray(products) || products.length === 0 || !totalAmount || !shippingAddress) {
+//     return res.status(400).json({ message: 'All fields are required' });
+//   }
 
-const Usermodel = mongoose.model('User', UserSchema)
+//   try {
+//     // Validate products
+//     products.forEach(product => {
+//       if (!product.name || !product.price || !product.category || !product.brand) {
+//         throw new Error('Each product must have a name, price, category, and brand');
+//       }
+//     });
+
+//     // Calculate total amount
+//     const calculatedTotalAmount = products.reduce((total, product) => total + (parseFloat(product.price) * (product.quantity || 1)), 0);
+
+//      // Validate shipping addresses
+//      shippingAddress.forEach(address => {
+//       if (!address.postalCode || !address.city || !address.state || !address.country || !address.street) {
+//         throw new Error('Each shipping address must have postalCode, city, state, country, and street');
+//       }
+//     });
+//     // Create a new order
+//     const newOrder = new Order({
+//       customerId,
+//       products,
+//       totalAmount: calculatedTotalAmount,
+//       shippingAddress
+//     });
+
+//     await newOrder.save();
+//     return res.status(201).json({ message: 'Order created successfully', order: newOrder });
+//   } catch (error) {
+//     return res.status(500).json({ message: 'Internal server error', error: error.message });
+//   }
+// });
 
 // Start the server
 app.listen(port, () => {
@@ -109,13 +77,15 @@ app.listen(port, () => {
 });
 
 // MongoDB connection URL
-const CONNECTION_URL = 'mongodb+srv://suleroheem88:temitope1@cluster1.rqlg4vs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1';
+const CONNECTION_URL =
+  "mongodb+srv://suleroheem88:temitope1@cluster1.rqlg4vs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1";
 
 // Connect to MongoDB
-mongoose.connect(CONNECTION_URL)
+mongoose
+  .connect(CONNECTION_URL)
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log("Connected to MongoDB");
   })
   .catch((error) => {
-    console.error('Error connecting to MongoDB', error);
+    console.error("Error connecting to MongoDB", error);
   });
